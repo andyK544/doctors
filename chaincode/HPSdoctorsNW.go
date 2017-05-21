@@ -210,7 +210,8 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 	if err != nil {
         panic(err)
     }
-	err = stub.PutState(res.Speciality, myStructBytes)
+	fmt.Println(string(myStructBytes))
+	err = stub.PutState(res.Speciality, []byte(string(myStructBytes)))
 	if err != nil {
 		fmt.Println("Failed to add Doctor to Speciality ")
 	}
