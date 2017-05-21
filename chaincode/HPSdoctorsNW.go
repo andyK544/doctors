@@ -132,6 +132,18 @@ func QueryDetails(stub shim.ChaincodeStubInterface, function string, args []stri
 		return json.Marshal(doctors)
 	}
 
+	if function == "GetSpeciality" {
+		fmt.Println("Invoking GetSpeciality " + function)
+		var sList SearchList
+		sList,err := GetSpeciality(args[0], stub)
+		if err != nil {
+			fmt.Println("Error receiving  the Speciality details")
+			return nil, errors.New("Error receiving  Speciality details")
+		}
+		fmt.Println("All success, returning Speciality details")
+		return json.Marshal(sList)
+	}
+
 	return nil, errors.New("Received unknown query function name")
 
 }
@@ -181,15 +193,26 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 		fmt.Println("Failed to add Doctor to Speciality ")
 	}
 	fmt.Println("Added Doc to Speciality")
-	fmt.Println("In initialize.AddDoctor end ")
-	
-	
-	
+	fmt.Println("In initialize.AddDoctor end ")	
 	return nil,nil
 
 }
 
+func GetSpeciality(DocSpec string, stub shim.ChaincodeStubInterface)(SearchList, error) {
+	fmt.Println("In query.GetSpeciality start ")
 
+	key := DocSpec
+	var sList SearchList
+	userBytes, err := stub.GetState(key)
+	if err != nil {
+		fmt.Println("Error retrieving SearchList" , DocSpec)
+		return sList, errors.New("Error retrieving speciality Details" + DocSpec)
+	}
+	err = json.Unmarshal(userBytes, &sList)
+	fmt.Println("Speciality   : " , sList);
+	fmt.Println("In query.GetSpeciality end ")
+	return sList, nil
+}
 
 func main() {
 	err := shim.Start(new(DoctorsNWChainCode))
