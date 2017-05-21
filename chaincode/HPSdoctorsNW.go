@@ -67,6 +67,17 @@ func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function 
         panic(err)
     }
     fmt.Println(string(body))
+	
+	
+	myStruct := SearchList{
+        DocNPI_IDS: []string{args[0],`98761`},
+    }
+    myStructBytes, err := json.Marshal(myStruct)
+	if err != nil {
+        panic(err)
+    }
+    fmt.Println(string(myStructBytes))
+	
 
 	if function == "InitializeUser" {
 		userBytes, err := AddDoctor(string(body),stub)
