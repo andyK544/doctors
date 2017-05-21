@@ -28,7 +28,7 @@ type Doctor struct{
 }
 
 type SearchList struct {
-    DocNPI_IDS   []string            `json:"DocNPI_IDS"`
+    DocNPI_IDS []string `json:"DocNPI_IDS"`
 }
 
 func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
@@ -141,7 +141,7 @@ func QueryDetails(stub shim.ChaincodeStubInterface, function string, args []stri
 			return nil, errors.New("Error receiving  Speciality details")
 		}
 		fmt.Println("All success, returning Speciality details")
-		return sList,err
+		return json.Marshal(sList)
 	}
 
 	return nil, errors.New("Received unknown query function name")
@@ -164,16 +164,34 @@ func GetDoctors(NPI_ID string, stub shim.ChaincodeStubInterface)(Doctor, error) 
 	return doctors, nil
 }
 
+func GetSpeciality(DocSpec string, stub shim.ChaincodeStubInterface)(SearchList, error) {
+	fmt.Println("In query.GetSpeciality start ")
+
+	key := DocSpec
+	var sList SearchList
+	userBytes, err := stub.GetState(key)
+	if err != nil {
+		fmt.Println("Error retrieving SearchList" , DocSpec)
+		return sList, errors.New("Error retrieving speciality Details" + DocSpec)
+	}
+
+	err = json.Unmarshal(userBytes, &sList)
+	fmt.Println("Speciality   : " , sList);
+	fmt.Println("In query.GetSpeciality end ")
+	return sList,nil
+}
 
 func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error) {
 	fmt.Println("In services.AddDoctor start ")
-
+		
+	res2 := &SearchList{}
 	res := &Doctor{}
 	err := json.Unmarshal([]byte(userJSON), res)
 	if err != nil {
 		fmt.Println("Failed to unmarshal user ")
 	}
 	fmt.Println("NPI_ID : ",res.NPI_ID)
+	res2.DocNPI_IDS[0] = res.NPI_ID
 
 	body, err := json.Marshal(res)
 	if err != nil {
@@ -188,7 +206,11 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 	fmt.Println("Created Docter with Key : "+ res.NPI_ID)
 	
 	fmt.Println("Trying to Add Doctor to a Speciality")
-	err = stub.PutState(res.Speciality, []byte(res.NPI_ID))
+	myStructBytes, err := json.Marshal(res2)
+	if err != nil {
+        panic(err)
+    }
+	err = stub.PutState(res.Speciality, myStructBytes)
 	if err != nil {
 		fmt.Println("Failed to add Doctor to Speciality ")
 	}
@@ -198,20 +220,6 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 
 }
 
-func GetSpeciality(DocSpec string, stub shim.ChaincodeStubInterface)([]byte, error) {
-	fmt.Println("In query.GetSpeciality start ")
-
-	key := DocSpec
-	sList, err := stub.GetState(key)
-	if err != nil {
-		fmt.Println("Error retrieving SearchList" , DocSpec)
-		return sList, errors.New("Error retrieving speciality Details" + DocSpec)
-	}
-
-	fmt.Println("Speciality   : " , sList);
-	fmt.Println("In query.GetSpeciality end ")
-	return sList,err
-}
 
 func main() {
 	err := shim.Start(new(DoctorsNWChainCode))
