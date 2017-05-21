@@ -24,15 +24,17 @@ type Doctor struct{
 	ExpiryDate string `json:"ExpiryDate"`
 	LicenseStatus string `json:"LicenseStatus"`
 	Hospital string `json:"Hospital"`
-
-
+	Speciality string `json:"Speciality"`
 }
 
+type SearchList struct {
+    DocNPI_IDS   []string            `json:"DocNPI_IDS"`
+}
 
 func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("In Init start ")
 
-	var NPI_ID, DoctorName, MedicalCouncilName, MedicalCouncilRegNumber, LicenseID, ExpiryDate, LicenseStatus, Hospital string
+	var NPI_ID, DoctorName, MedicalCouncilName, MedicalCouncilRegNumber, LicenseID, ExpiryDate, LicenseStatus, Hospital, Speciality string
 
 	DoctorName = `John Doe`
 	MedicalCouncilName = `Indian Medial Council`
@@ -41,6 +43,7 @@ func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function 
 	ExpiryDate = `2017/05/05`
 	LicenseStatus =`expired`
 	Hospital = `Columbia Asia`
+	Speciality = `Cardiologist`
 
 	if len(args) != 1 {
 		return nil, errors.New("Incorrect number of arguments. Expecting NPI_ID")
@@ -57,6 +60,7 @@ func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function 
 	res.ExpiryDate = ExpiryDate
 	res.LicenseStatus = LicenseStatus
 	res.Hospital = Hospital
+	res.Speciality = Speciality
 
 	body, err := json.Marshal(res)
 	if err != nil {
@@ -151,12 +155,8 @@ func GetDoctors(NPI_ID string, stub shim.ChaincodeStubInterface)(Doctor, error) 
 
 func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error) {
 	fmt.Println("In services.AddDoctor start ")
-	//smartMeterId :=args[0]
-	//userType 	:=args[1]
 
-	//var user User
 	res := &Doctor{}
-	//user := &User{}
 	err := json.Unmarshal([]byte(userJSON), res)
 	if err != nil {
 		fmt.Println("Failed to unmarshal user ")
@@ -174,12 +174,20 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 	}
 
 	fmt.Println("Created Docter with Key : "+ res.NPI_ID)
+	
+	fmt.Println("Trying to Add Doctor to a Speciality")
+	err = stub.PutState(res.Speciality, []byte(res.NPI_ID))
+	if err != nil {
+		fmt.Println("Failed to add Doctor to Speciality ")
+	}
+	fmt.Println("Added Doc to Speciality")
 	fmt.Println("In initialize.AddDoctor end ")
+	
+	
+	
 	return nil,nil
 
 }
-
-
 
 
 
