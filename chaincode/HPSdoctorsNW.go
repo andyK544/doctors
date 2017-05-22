@@ -7,6 +7,8 @@ import (
 	// "strconv"
 	// "time"
 	// "strings"
+	"bytes"
+	"encoding/gob"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"encoding/json"
 )
@@ -25,10 +27,6 @@ type Doctor struct{
 	LicenseStatus string `json:"LicenseStatus"`
 	Hospital string `json:"Hospital"`
 	Speciality string `json:"Speciality"`
-}
-
-type SearchList struct {
-    DocNPI_IDS []string `json:"DocNPI_IDS"`
 }
 
 func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
@@ -69,16 +67,7 @@ func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function 
     fmt.Println(string(body))
 	
 	
-	myStruct := SearchList{
-        DocNPI_IDS: []string{args[0],`98761`},
-    }
-    myStructBytes, err := json.Marshal(myStruct)
-	if err != nil {
-        panic(err)
-    }
-    fmt.Println(string(myStructBytes))
 	
-
 	if function == "InitializeUser" {
 		userBytes, err := AddDoctor(string(body),stub)
 		if err != nil {
@@ -86,6 +75,7 @@ func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function 
 			return nil, err
 		}
 		fmt.Println("Initialization of User complete")
+		
 		return userBytes, nil
 	}
 	fmt.Println("Initialization No functions found ")
@@ -143,19 +133,7 @@ func QueryDetails(stub shim.ChaincodeStubInterface, function string, args []stri
 		return json.Marshal(doctors)
 	}
 
-	if function == "GetSpeciality" {
-		fmt.Println("Invoking GetSpeciality " + function)
-		
-		sList,err := GetSpeciality(args[0], stub)
-		if err != nil {
-			fmt.Println("Error receiving  the Speciality details")
-			return nil, errors.New("Error receiving  Speciality details")
-		}
-		fmt.Println("All success, returning Speciality details")
-		return json.Marshal(sList)
-	}
-
-	return nil, errors.New("Received unknown query function name")
+    return nil, errors.New("Received unknown query function name")
 
 }
 
@@ -170,39 +148,24 @@ func GetDoctors(NPI_ID string, stub shim.ChaincodeStubInterface)(Doctor, error) 
 		return doctors, errors.New("Error retrieving Doctor Details" + NPI_ID)
 	}
 	err = json.Unmarshal(userBytes, &doctors)
-	fmt.Println("Doctor   : " , doctors);
+	fmt.Printf("%q",userBytes)
+	fmt.Println("\nDoctor   : " , doctors);
 	fmt.Println("In query.GetDoctors end ")
 	return doctors, nil
 }
 
-func GetSpeciality(DocSpec string, stub shim.ChaincodeStubInterface)(SearchList, error) {
-	fmt.Println("In query.GetSpeciality start ")
-
-	key := DocSpec
-	var sList SearchList
-	userBytes, err := stub.GetState(key)
-	if err != nil {
-		fmt.Println("Error retrieving SearchList" , DocSpec)
-		return sList, errors.New("Error retrieving speciality Details" + DocSpec)
-	}
-
-	err = json.Unmarshal(userBytes, &sList)
-	fmt.Println("Speciality   : " , sList);
-	fmt.Println("In query.GetSpeciality end ")
-	return sList,nil
-}
 
 func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error) {
 	fmt.Println("In services.AddDoctor start ")
-		
-	res2 := &SearchList{}
+	var s []string
+	
 	res := &Doctor{}
 	err := json.Unmarshal([]byte(userJSON), res)
 	if err != nil {
 		fmt.Println("Failed to unmarshal user ")
 	}
 	fmt.Println("NPI_ID : ",res.NPI_ID)
-	res2.DocNPI_IDS[0] = res.NPI_ID
+
 
 	body, err := json.Marshal(res)
 	if err != nil {
@@ -213,20 +176,26 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 	if err != nil {
 		fmt.Println("Failed to create Doctor ")
 	}
+	
+	if err != nil {
+		fmt.Println("Failed to create Doctor ")
+	}
 
 	fmt.Println("Created Docter with Key : "+ res.NPI_ID)
+
+	// Adding Doctor's NPI_ID to Speciality
+	s = append(s, res.NPI_ID)
+	buf := &bytes.Buffer{}
+    gob.NewEncoder(buf).Encode(s)
+    bs := buf.Bytes()
+	fmt.Println("Here is the String array in Byte format-->")
+    fmt.Printf("%q", bs)
 	
-	fmt.Println("Trying to Add Doctor to a Speciality")
-	myStructBytes, err := json.Marshal(res2)
+	err = stub.PutState(res.Speciality, bs)
 	if err != nil {
-        panic(err)
-    }
-	fmt.Println(string(myStructBytes))
-	err = stub.PutState(res.Speciality, []byte(string(myStructBytes)))
-	if err != nil {
-		fmt.Println("Failed to add Doctor to Speciality ")
+		fmt.Println("Failed to Failed to add Doctor to Speciality ")
 	}
-	fmt.Println("Added Doc"+ res.NPI_ID + "to Speciality"+ res.Speciality)
+
 	fmt.Println("In initialize.AddDoctor end ")	
 	return nil,nil
 
