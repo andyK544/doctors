@@ -136,13 +136,13 @@ func QueryDetails(stub shim.ChaincodeStubInterface, function string, args []stri
 	if function == "GetSpeciality" {
 		fmt.Println("Invoking GetSpeciality " + function)
 		
-		sList,err := GetSpeciality(args[0], stub)
+		sListBytes,err := GetSpeciality(args[0], stub)
 		if err != nil {
 			fmt.Println("Error receiving  the Speciality details")
 			return nil, errors.New("Error receiving  Speciality details")
 		}
 		fmt.Println("All success, returning Speciality details")
-		return sList, nil
+		return sListBytes, nil
 	}
     return nil, errors.New("Received unknown query function name")
 
@@ -170,11 +170,18 @@ func GetSpeciality(DocSpec string, stub shim.ChaincodeStubInterface)([]byte, err
  
 	key := DocSpec
 	userBytes, err := stub.GetState(key)
+	sList := []string{}
+	sListBytes := bytes.NewBuffer(userBytes)
+	gob.NewDecoder(sListBytes).Decode(&sList)
+	fmt.Println("sList after conversion to String")
+	fmt.Printf("%v", sList)
+	fmt.Println(sList)
 	if err != nil {
 		fmt.Println("Error retrieving Speciality" , DocSpec)
 		return userBytes, errors.New("Error retrieving speciality Details" + DocSpec)
 	}
     
+	fmt.Println("Speciality   : " , sListBytes);
 	fmt.Println("Speciality   : " , userBytes);
 	fmt.Println("In query.GetSpeciality end ")
 	return userBytes, nil
@@ -209,6 +216,7 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 	fmt.Println("Created Docter with Key : "+ res.NPI_ID)
 
 	// Adding Doctor's NPI_ID to Speciality
+	s = append(s, "00000")
 	s = append(s, res.NPI_ID)
 	buf := &bytes.Buffer{}
     gob.NewEncoder(buf).Encode(s)
