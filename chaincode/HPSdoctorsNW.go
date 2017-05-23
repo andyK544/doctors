@@ -29,6 +29,10 @@ type Doctor struct{
 	Speciality string `json:"Speciality"`
 }
 
+type DocSearchList struct{
+	DocList []Doctor `json:"DocList"`
+}
+
 func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("In Init start ")
 
@@ -133,17 +137,17 @@ func QueryDetails(stub shim.ChaincodeStubInterface, function string, args []stri
 		return json.Marshal(doctors)
 	}
 
-	// if function == "GetSpeciality" {
-		// fmt.Println("Invoking GetSpeciality " + function)
+	if function == "GetDocsBySpeciality" {
+		fmt.Println("Invoking GetDocsBySpeciality " + function)
 		
-		// sListBytes,err := GetSpeciality(args[0], stub)
-		// if err != nil {
-			// fmt.Println("Error receiving  the Speciality details")
-			// return nil, errors.New("Error receiving  Speciality details")
-		// }
-		// fmt.Println("All success, returning Speciality details")
-		// return sListBytes, nil
-	// }
+		sList,err := GetDocsBySpeciality(args[0], stub)
+		if err != nil {
+			fmt.Println("Error receiving  the Speciality details")
+			return nil, errors.New("Error receiving  Speciality details")
+		}
+		fmt.Println("All success, returning Speciality details")
+		return json.Marshal(sList)
+	}
     return nil, errors.New("Received unknown query function name")
 
 }
@@ -162,6 +166,40 @@ func GetDoctors(NPI_ID string, stub shim.ChaincodeStubInterface)(Doctor, error) 
 	fmt.Printf("%q",userBytes)
 	fmt.Println("\nDoctor   : " , doctors);
 	fmt.Println("In query.GetDoctors end ")
+	return doctors, nil
+}
+
+func GetDocsBySpeciality(DocSpec string, stub shim.ChaincodeStubInterface)([]Doctor, error) {
+	fmt.Println("In query.GetDocsBySpeciality start ")
+	//sList := []string{}
+	key := DocSpec
+	var doctors[] Doctor;
+	//var doctorVal Doctor;
+	
+
+	sList, _ := GetSpeciality(key, stub)
+	length := len(sList)
+
+	
+	
+	
+	for i := 0; i < length; i++ {
+    doctorVal,err := GetDoctors(sList[i], stub)
+	if err != nil {
+			fmt.Println("Error receiving  the Doctor details")
+			return doctors, errors.New("Error receiving  Doctor details")
+		}
+			
+			doctors = append(doctors, doctorVal)
+			fmt.Println(doctorVal)
+			fmt.Println(doctors)
+	
+	}
+	
+
+	fmt.Println("In query.GetDocsBySpeciality end ")
+	fmt.Println("Printing doctors outside loop")
+	fmt.Println(doctors)
 	return doctors, nil
 }
 
