@@ -25,6 +25,7 @@ type Doctor struct{
 	Hospital string `json:"Hospital"`
 	Speciality string `json:"Speciality"`
 	Area string `json:"Area"`
+	Payer string `json:"Payer"`
 }
 
 type SearchList struct{
@@ -39,7 +40,7 @@ type DocSearchList struct{
 func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("In Init start ")
 
-	var NPI_ID, DoctorName, MedicalCouncilName, MedicalCouncilRegNumber, LicenseID, ExpiryDate, LicenseStatus, Hospital, Speciality, Area string
+	var NPI_ID, DoctorName, MedicalCouncilName, MedicalCouncilRegNumber, LicenseID, ExpiryDate, LicenseStatus, Hospital, Speciality, Area, Payer string
 
 	DoctorName = `John Doe`
 	MedicalCouncilName = `Indian Medial Council`
@@ -50,6 +51,7 @@ func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function 
 	Hospital = `Columbia Asia`
 	Speciality = `Cardiologist`
 	Area = `SanFranscisco`
+	Payer = `Cigna`
 
 	if len(args) != 1 {
 		return nil, errors.New("Incorrect number of arguments. Expecting NPI_ID")
@@ -68,6 +70,7 @@ func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function 
 	res.Hospital = Hospital
 	res.Speciality = Speciality
 	res.Area = Area
+	res.Payer = Payer
 
 	body, err := json.Marshal(res)
 	if err != nil {
@@ -222,26 +225,29 @@ func AddDocToSearchList(DocSpec SearchList, stub shim.ChaincodeStubInterface)([]
 	// Checking if NPI_ID already present.
 	var flag int = 0
 	s, err := GetDocList(DocSpec.SearchKeyWord, stub)
+	fmt.Println("This is the list of NPI_IDs under SearchKey", DocSpec.SearchKeyWord);
+	fmt.Println(s)
 	length :=len(s)
 	
 	for i := 0; i < length; i++ {
 		if s[i] == DocSpec.NPI_ID {
 			flag = 1
+			fmt.Println("NPI_ID", DocSpec.NPI_ID, "Already under SearchKeyWord", DocSpec.SearchKeyWord);
 		}
 	}
 
 	// Adding Doctor's NPI_ID to SearchKeyWord List
 	if flag != 1 {
 		s = append(s, DocSpec.NPI_ID)   // appending NPI_ID to existing list only if not present.
-		
+		fmt.Println("Printing LIst of NPI_IDs", s);
 		// convert from []string to []byte to put into ledger
 		buf := &bytes.Buffer{}
 		gob.NewEncoder(buf).Encode(s)
 		bs := buf.Bytes()
 		
 		
-		fmt.Println("Here is the String array in Byte format-->")
-		fmt.Printf("%q", bs)
+		// fmt.Println("Here is the String array in Byte format-->")
+		// fmt.Printf("%q", bs)
 		fmt.Println("Adding ", DocSpec.NPI_ID," to SearchKeyWord ", DocSpec.SearchKeyWord); 
 		err = stub.PutState(DocSpec.SearchKeyWord, bs)
 		
@@ -252,13 +258,45 @@ func AddDocToSearchList(DocSpec SearchList, stub shim.ChaincodeStubInterface)([]
 	return nil, nil
 }
 
+func RemoveDocFromSearchList(DocSpec SearchList, stub shim.ChaincodeStubInterface)([]byte, error) {
+	// Checking if NPI_ID already present.
+
+	var r []string 
+	s, err := GetDocList(DocSpec.SearchKeyWord, stub)
+	fmt.Println("This is the list of NPI_IDs under SearchKey -->", DocSpec.SearchKeyWord);
+	fmt.Println(s)
+	length :=len(s)
+	
+	for i := 0; i < length; i++ {
+			if s[i] != DocSpec.NPI_ID {
+			r = append(r, s[i])
+		}
+	}
+      
+	
+		fmt.Println("Printing List of NPI_IDs", r);
+		// convert from []string to []byte to put into ledger
+		buf := &bytes.Buffer{}
+		gob.NewEncoder(buf).Encode(r)
+		bs := buf.Bytes()
+
+		fmt.Println("Removed", DocSpec.NPI_ID, "from  SearchKeyWord", DocSpec.SearchKeyWord);
+		err = stub.PutState(DocSpec.SearchKeyWord, bs)
+		
+		if err != nil {
+			fmt.Println("Failed to remove NPI_ID from SearchKeyWord ")
+		}
+	
+	return nil, nil
+}
+
 func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error) {
 	fmt.Println("In services.AddDoctor start ")
 	//var s []string
 	var SL SearchList
 	res := &Doctor{}
-
-	 
+	
+	// formatting the input JSON string 
 	err := json.Unmarshal([]byte(userJSON), res)
 	if err != nil {
 		fmt.Println("Failed to unmarshal user ")
@@ -271,6 +309,22 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
         panic(err)
     }
     fmt.Println(string(body))
+	
+	
+
+	//Checking Doctor already exists in the ledger.
+		fmt.Println("Invoking GetDoctorDetails ")
+		var doctors Doctor
+		doctors,err = GetDoctorDetails(res.NPI_ID, stub)
+		if err != nil {
+			fmt.Println("Error receiving  the Doctor details")
+			return nil, errors.New("Error receiving  Doctor details")
+		}
+		fmt.Println("All success, returning doctor details")	
+		
+
+	// Add Doctor to ledger.
+
 	err = stub.PutState(res.NPI_ID, []byte(string(body)))
 	if err != nil {
 		fmt.Println("Failed to create Doctor ")
@@ -282,9 +336,9 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 
 	fmt.Println("Created Doctor with Key : "+ res.NPI_ID)
 	
-	// Setting SearchList for Speciality search
+	// Setting SearchList for Payer search
 	SL.NPI_ID = res.NPI_ID
-	SL.SearchKeyWord = res.Speciality
+	SL.SearchKeyWord = res.Payer
 	
 	testBytes,err1 := AddDocToSearchList(SL, stub)
 	if err1 != nil {
@@ -295,7 +349,7 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 	SL.NPI_ID = res.NPI_ID
 	SL.SearchKeyWord = res.Area
 	
-	testBytes,err = AddDocToSearchList(SL, stub)
+	testBytes,err1 = AddDocToSearchList(SL, stub)
 	
 	fmt.Printf("%q", testBytes)
 	
@@ -303,7 +357,22 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 		fmt.Println("Failed to add Doctor to Area search ")
 	}
 	
-
+	// Removing NPI_ID Area and Payer
+	
+	if doctors.Area != "" {
+		 SL.NPI_ID = doctors.NPI_ID
+		 SL.SearchKeyWord = doctors.Area
+	     testBytes,err1 = AddDocToSearchList(SL, stub)	
+		 
+		 SL.NPI_ID = doctors.NPI_ID
+		 SL.SearchKeyWord = doctors.Payer
+	
+	     testBytes,err1 = AddDocToSearchList(SL, stub)	
+		 
+		 
+	}
+	
+	
 	fmt.Println("In initialize.AddDoctor end ")	
 	return nil,nil
 
