@@ -4,9 +4,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	// "strconv"
-	// "time"
-	// "strings"
 	"bytes"
 	"encoding/gob"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
@@ -27,6 +24,12 @@ type Doctor struct{
 	LicenseStatus string `json:"LicenseStatus"`
 	Hospital string `json:"Hospital"`
 	Speciality string `json:"Speciality"`
+	Area string `json:"Area"`
+}
+
+type SearchList struct{
+	NPI_ID string `json:"NPI_ID"`
+	SearchKeyWord string `json:"SearchKeyWord"`
 }
 
 type DocSearchList struct{
@@ -36,7 +39,7 @@ type DocSearchList struct{
 func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 	fmt.Println("In Init start ")
 
-	var NPI_ID, DoctorName, MedicalCouncilName, MedicalCouncilRegNumber, LicenseID, ExpiryDate, LicenseStatus, Hospital, Speciality string
+	var NPI_ID, DoctorName, MedicalCouncilName, MedicalCouncilRegNumber, LicenseID, ExpiryDate, LicenseStatus, Hospital, Speciality, Area string
 
 	DoctorName = `John Doe`
 	MedicalCouncilName = `Indian Medial Council`
@@ -46,6 +49,7 @@ func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function 
 	LicenseStatus =`expired`
 	Hospital = `Columbia Asia`
 	Speciality = `Cardiologist`
+	Area = `SanFranscisco`
 
 	if len(args) != 1 {
 		return nil, errors.New("Incorrect number of arguments. Expecting NPI_ID")
@@ -63,6 +67,7 @@ func (self *DoctorsNWChainCode) Init(stub shim.ChaincodeStubInterface, function 
 	res.LicenseStatus = LicenseStatus
 	res.Hospital = Hospital
 	res.Speciality = Speciality
+	res.Area = Area
 
 	body, err := json.Marshal(res)
 	if err != nil {
@@ -108,11 +113,6 @@ func (self *DoctorsNWChainCode) Invoke(stub shim.ChaincodeStubInterface,
 
 func (self *DoctorsNWChainCode) Query(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error){
 	fmt.Println("In Query with function " + function)
-	//bytes, err:= query.Query(stub, function,args)
-	//if err != nil {
-		//fmt.Println("Error retrieving function  ")
-		//return nil, err
-	//}
 
 	bytes, err:= QueryDetails(stub, function,args)
 	if err != nil {
@@ -125,10 +125,10 @@ func (self *DoctorsNWChainCode) Query(stub shim.ChaincodeStubInterface, function
 
 func QueryDetails(stub shim.ChaincodeStubInterface, function string, args []string) ([]byte, error) {
 
-	if function == "GetDoctors" {
-		fmt.Println("Invoking GetDoctors " + function)
+	if function == "GetDoctorDetails" {
+		fmt.Println("Invoking GetDoctorDetails " + function)
 		var doctors Doctor
-		doctors,err := GetDoctors(args[0], stub)
+		doctors,err := GetDoctorDetails(args[0], stub)
 		if err != nil {
 			fmt.Println("Error receiving  the Doctor details")
 			return nil, errors.New("Error receiving  Doctor details")
@@ -137,10 +137,10 @@ func QueryDetails(stub shim.ChaincodeStubInterface, function string, args []stri
 		return json.Marshal(doctors)
 	}
 
-	if function == "GetDocsBySpeciality" {
-		fmt.Println("Invoking GetDocsBySpeciality " + function)
+	if function == "GetDocDetailsBySearchKey" {
+		fmt.Println("Invoking GetDocDetailsBySearchKey " + function)
 		
-		sList,err := GetDocsBySpeciality(args[0], stub)
+		sList,err := GetDocDetailsBySearchKey(args[0], stub)
 		if err != nil {
 			fmt.Println("Error receiving  the Speciality details")
 			return nil, errors.New("Error receiving  Speciality details")
@@ -152,8 +152,8 @@ func QueryDetails(stub shim.ChaincodeStubInterface, function string, args []stri
 
 }
 
-func GetDoctors(NPI_ID string, stub shim.ChaincodeStubInterface)(Doctor, error) {
-	fmt.Println("In query.GetDoctors start ")
+func GetDoctorDetails(NPI_ID string, stub shim.ChaincodeStubInterface)(Doctor, error) {
+	fmt.Println("In query.GetDoctorDetails start ")
 
 	key := NPI_ID
 	var doctors Doctor
@@ -165,31 +165,27 @@ func GetDoctors(NPI_ID string, stub shim.ChaincodeStubInterface)(Doctor, error) 
 	err = json.Unmarshal(userBytes, &doctors)
 	fmt.Printf("%q",userBytes)
 	fmt.Println("\nDoctor   : " , doctors);
-	fmt.Println("In query.GetDoctors end ")
+	fmt.Println("In query.GetDoctorDetails end ")
 	return doctors, nil
 }
 
-func GetDocsBySpeciality(DocSpec string, stub shim.ChaincodeStubInterface)([]Doctor, error) {
-	fmt.Println("In query.GetDocsBySpeciality start ")
-	//sList := []string{}
+func GetDocDetailsBySearchKey(DocSpec string, stub shim.ChaincodeStubInterface)([]Doctor, error) {
+	fmt.Println("In query.GetDocDetailsBySearchKey start ")
+	
 	key := DocSpec
 	var doctors[] Doctor;
-	//var doctorVal Doctor;
-	
 
-	sList, _ := GetSpeciality(key, stub)
+	sList, _ := GetDocList(key, stub)
 	length := len(sList)
-
-	
-	
 	
 	for i := 0; i < length; i++ {
-    doctorVal,err := GetDoctors(sList[i], stub)
+    doctorVal,err := GetDoctorDetails(sList[i], stub)
 	if err != nil {
 			fmt.Println("Error receiving  the Doctor details")
 			return doctors, errors.New("Error receiving  Doctor details")
 		}
 			
+			//Creating a list of doctors.
 			doctors = append(doctors, doctorVal)
 			fmt.Println(doctorVal)
 			fmt.Println(doctors)
@@ -197,14 +193,14 @@ func GetDocsBySpeciality(DocSpec string, stub shim.ChaincodeStubInterface)([]Doc
 	}
 	
 
-	fmt.Println("In query.GetDocsBySpeciality end ")
+	fmt.Println("In query.GetDocDetailsBySearchKey end ")
 	fmt.Println("Printing doctors outside loop")
 	fmt.Println(doctors)
 	return doctors, nil
 }
 
-func GetSpeciality(DocSpec string, stub shim.ChaincodeStubInterface)([]string, error) {
-	fmt.Println("In query.GetSpeciality start ")
+func GetDocList(DocSpec string, stub shim.ChaincodeStubInterface)([]string, error) {
+	fmt.Println("In query.GetDocList start ")
 	key := DocSpec
 	userBytes, err := stub.GetState(key)
 	sList := []string{}
@@ -218,15 +214,51 @@ func GetSpeciality(DocSpec string, stub shim.ChaincodeStubInterface)([]string, e
 	}
     
 	fmt.Println("Speciality   : " , userBytes);
-	fmt.Println("In query.GetSpeciality end ")
+	fmt.Println("In query.GetDocList end ")
 	return sList, nil
+}
+
+func AddDocToSearchList(DocSpec SearchList, stub shim.ChaincodeStubInterface)([]byte, error) {
+	// Checking if NPI_ID already present.
+	var flag int = 0
+	s, err := GetDocList(DocSpec.SearchKeyWord, stub)
+	length :=len(s)
+	
+	for i := 0; i < length; i++ {
+		if s[i] == DocSpec.NPI_ID {
+			flag = 1
+		}
+	}
+
+	// Adding Doctor's NPI_ID to SearchKeyWord List
+	if flag != 1 {
+		s = append(s, DocSpec.NPI_ID)   // appending NPI_ID to existing list only if not present.
+		
+		// convert from []string to []byte to put into ledger
+		buf := &bytes.Buffer{}
+		gob.NewEncoder(buf).Encode(s)
+		bs := buf.Bytes()
+		
+		
+		fmt.Println("Here is the String array in Byte format-->")
+		fmt.Printf("%q", bs)
+		fmt.Println("Adding ", DocSpec.NPI_ID," to SearchKeyWord ", DocSpec.SearchKeyWord); 
+		err = stub.PutState(DocSpec.SearchKeyWord, bs)
+		
+		if err != nil {
+			fmt.Println("Failed to add Doctor to SearchKeyWord ")
+		}
+	}
+	return nil, nil
 }
 
 func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error) {
 	fmt.Println("In services.AddDoctor start ")
-	var s []string
-	var flag int
+	//var s []string
+	var SL SearchList
 	res := &Doctor{}
+
+	 
 	err := json.Unmarshal([]byte(userJSON), res)
 	if err != nil {
 		fmt.Println("Failed to unmarshal user ")
@@ -250,30 +282,28 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 
 	fmt.Println("Created Doctor with Key : "+ res.NPI_ID)
 	
-	// Checking if NPI_ID already present.
-	s, err = GetSpeciality(res.Speciality, stub)
-	length :=len(s)
+	// Setting SearchList for Speciality search
+	SL.NPI_ID = res.NPI_ID
+	SL.SearchKeyWord = res.Speciality
 	
-	for i := 0; i < length; i++ {
-		if s[i] == res.NPI_ID {
-		flag = 1
-		}
+	testBytes,err1 := AddDocToSearchList(SL, stub)
+	if err1 != nil {
+		fmt.Println("Failed to add Doctor to Speciality search ")
+	}	
+	
+	// Setting SearchList for Area search
+	SL.NPI_ID = res.NPI_ID
+	SL.SearchKeyWord = res.Area
+	
+	testBytes,err = AddDocToSearchList(SL, stub)
+	
+	fmt.Printf("%q", testBytes)
+	
+	if err != nil {
+		fmt.Println("Failed to add Doctor to Area search ")
 	}
+	
 
-	// Adding Doctor's NPI_ID to Speciality
-	if flag != 1 {
-		s = append(s, res.NPI_ID)
-		buf := &bytes.Buffer{}
-		gob.NewEncoder(buf).Encode(s)
-		bs := buf.Bytes()
-		fmt.Println("Here is the String array in Byte format-->")
-		fmt.Printf("%q", bs)
-		fmt.Println("Adding ",res.NPI_ID," to Speciality ","res.Speciality"); 
-		err = stub.PutState(res.Speciality, bs)
-		if err != nil {
-			fmt.Println("Failed to add Doctor to Speciality ")
-		}
-	}
 	fmt.Println("In initialize.AddDoctor end ")	
 	return nil,nil
 
