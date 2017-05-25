@@ -368,20 +368,24 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 	// Removing NPI_ID Area and Payer
 	
 	if doctors.NPI_ID != "" {
+	
+		if doctors.Area != res.Area {
 		 SL.NPI_ID = doctors.NPI_ID
 		 SL.SearchKeyWord = doctors.Area
 	     testBytes,err1 = RemoveDocFromSearchList(SL, stub)	
+		}
 	
-	
+		if doctors.Payer != res.Payer {
 		 SL.NPI_ID = doctors.NPI_ID
 		 SL.SearchKeyWord = doctors.Payer
 	     testBytes,err1 = RemoveDocFromSearchList(SL, stub)	
-
+		}
 		 
+		if doctors.Speciality != res.Speciality {
 		 SL.NPI_ID = doctors.NPI_ID
 		 SL.SearchKeyWord = doctors.Speciality
 	     testBytes,err1 = RemoveDocFromSearchList(SL, stub)
-		 
+		}
 	}
 	
 	
