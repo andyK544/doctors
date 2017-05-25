@@ -166,7 +166,7 @@ func GetDoctorDetails(NPI_ID string, stub shim.ChaincodeStubInterface)(Doctor, e
 		return doctors, errors.New("Error retrieving Doctor Details" + NPI_ID)
 	}
 	err = json.Unmarshal(userBytes, &doctors)
-	fmt.Printf("%q",userBytes)
+	//fmt.Printf("%q",userBytes)
 	fmt.Println("\nDoctor   : " , doctors);
 	fmt.Println("In query.GetDoctorDetails end ")
 	return doctors, nil
@@ -264,7 +264,7 @@ func RemoveDocFromSearchList(DocSpec SearchList, stub shim.ChaincodeStubInterfac
 	var r []string 
 	s, err := GetDocList(DocSpec.SearchKeyWord, stub)
 	fmt.Println("This is the list of NPI_IDs under SearchKey -->", DocSpec.SearchKeyWord);
-	fmt.Println(s)
+	fmt.Println("This is serachlist for:", DocSpec.SearchKeyWord,"-->", s);
 	length :=len(s)
 	
 	for i := 0; i < length; i++ {
@@ -274,7 +274,7 @@ func RemoveDocFromSearchList(DocSpec SearchList, stub shim.ChaincodeStubInterfac
 	}
       
 	
-		fmt.Println("Printing List of NPI_IDs", r);
+		fmt.Println("Printing New List of NPI_IDs for", DocSpec.SearchKeyWord, "-->", r);
 		// convert from []string to []byte to put into ledger
 		buf := &bytes.Buffer{}
 		gob.NewEncoder(buf).Encode(r)
@@ -330,45 +330,57 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 		fmt.Println("Failed to create Doctor ")
 	}
 	
-	if err != nil {
-		fmt.Println("Failed to create Doctor ")
-	}
-
 	fmt.Println("Created Doctor with Key : "+ res.NPI_ID)
 	
 	// Setting SearchList for Payer search
 	SL.NPI_ID = res.NPI_ID
 	SL.SearchKeyWord = res.Payer
-	
+	fmt.Println("Printing Searchlist for Payer -->", SL);
 	testBytes,err1 := AddDocToSearchList(SL, stub)
 	if err1 != nil {
-		fmt.Println("Failed to add Doctor to Speciality search ")
+		fmt.Println("Failed to add Doctor to Payer search ")
 	}	
 	
 	// Setting SearchList for Area search
 	SL.NPI_ID = res.NPI_ID
 	SL.SearchKeyWord = res.Area
-	
+	fmt.Println("Printing Searchlist for Area -->", SL);
 	testBytes,err1 = AddDocToSearchList(SL, stub)
-	
-	fmt.Printf("%q", testBytes)
-	
-	if err != nil {
+	if err1 != nil {
 		fmt.Println("Failed to add Doctor to Area search ")
 	}
 	
+	
+	// Setting SearchList for Speciality search
+	SL.NPI_ID = res.NPI_ID
+	SL.SearchKeyWord = res.Speciality
+	fmt.Println("Printing Searchlist for Speciality -->", SL);
+	testBytes,err1 = AddDocToSearchList(SL, stub)
+	if err1 != nil {
+		fmt.Println("Failed to add Doctor to Speciality search ")
+	}
+	
+	
+	fmt.Printf("%q", testBytes) //dummy print
+	
+	
+	
 	// Removing NPI_ID Area and Payer
 	
-	if doctors.Area != "" {
+	if doctors.NPI_ID != "" {
 		 SL.NPI_ID = doctors.NPI_ID
 		 SL.SearchKeyWord = doctors.Area
-	     testBytes,err1 = AddDocToSearchList(SL, stub)	
-		 
+	     testBytes,err1 = RemoveDocFromSearchList(SL, stub)	
+	
+	
 		 SL.NPI_ID = doctors.NPI_ID
 		 SL.SearchKeyWord = doctors.Payer
-	
-	     testBytes,err1 = AddDocToSearchList(SL, stub)	
+	     testBytes,err1 = RemoveDocFromSearchList(SL, stub)	
+
 		 
+		 SL.NPI_ID = doctors.NPI_ID
+		 SL.SearchKeyWord = doctors.Speciality
+	     testBytes,err1 = RemoveDocFromSearchList(SL, stub)
 		 
 	}
 	
