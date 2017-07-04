@@ -372,6 +372,7 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 	// Removing NPI_ID Area and Payer
 
 	if doctors.NPI_ID != "" {
+<<<<<<< HEAD
 
 		if doctors.Area != res.Area {
 			SL.NPI_ID = doctors.NPI_ID
@@ -390,6 +391,22 @@ func AddDoctor(userJSON string, stub shim.ChaincodeStubInterface) ([]byte, error
 			SL.SearchKeyWord = doctors.Speciality
 			err1 = RemoveDocFromSearchList(SL, stub)
 		}
+=======
+		 SL.NPI_ID = doctors.NPI_ID
+		 SL.SearchKeyWord = doctors.Area
+	     testBytes,err1 = RemoveDocFromSearchList(SL, stub)	
+	
+	
+		 SL.NPI_ID = doctors.NPI_ID
+		 SL.SearchKeyWord = doctors.Payer
+	     testBytes,err1 = RemoveDocFromSearchList(SL, stub)	
+
+		 
+		 SL.NPI_ID = doctors.NPI_ID
+		 SL.SearchKeyWord = doctors.Speciality
+	     testBytes,err1 = RemoveDocFromSearchList(SL, stub)
+		 
+>>>>>>> parent of a088088... fine tuning removal of SearchList items
 	}
 
 	fmt.Println("In initialize.AddDoctor end ")
